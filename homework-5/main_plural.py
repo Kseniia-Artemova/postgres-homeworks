@@ -1,5 +1,4 @@
 import json
-from pprint import pprint
 import psycopg2
 
 from config import config
@@ -96,6 +95,7 @@ def get_suppliers_data(json_file: str) -> list[dict]:
 
 def insert_suppliers_data(cur, suppliers: list[dict]) -> None:
     """Добавляет данные из suppliers в таблицу suppliers."""
+
     for data in suppliers:
         values = (
             data.get("company_name"),
@@ -115,6 +115,7 @@ def insert_suppliers_data(cur, suppliers: list[dict]) -> None:
 
 def create_suppliers_products_table(cur, suppliers) -> None:
     """Добавляет foreign key со ссылкой на supplier_id в таблицу products."""
+
     cur.execute("""       
         CREATE TABLE suppliers_products
         (
@@ -128,14 +129,16 @@ def create_suppliers_products_table(cur, suppliers) -> None:
 
     for supplier in suppliers:
         supplier_id = supplier.get("supplier_id")
-        for product in supplier.get("products", []):
-            if "\'" in product:
-                product = product.replace("\'", "\'\'")
+        products = supplier.get("products", [])
+        if products:
+            products = [product.replace("\'", "\'\'") if "\'" in product else product for product in products]
+            insert = ", ".join(list(map(lambda x: "'" + x + "'", products)))
             cur.execute(f"""
                 SELECT product_id
                 FROM products
-                WHERE product_name = '{product}';
+                WHERE product_name IN ({insert});
             """)
+
             product_id = cur.fetchone()[0]
             cur.execute("""
                 INSERT INTO suppliers_products

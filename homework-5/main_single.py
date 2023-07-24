@@ -126,13 +126,14 @@ def add_foreign_keys(cur, suppliers) -> None:
 
     for supplier in suppliers:
         supplier_id = supplier.get("supplier_id")
-        for product in supplier.get("products", []):
-            if "\'" in product:
-                product = product.replace("\'", "\'\'")
+        products = supplier.get("products", [])
+        if products:
+            products = [product.replace("\'", "\'\'") if "\'" in product else product for product in products]
+            insert = ", ".join(list(map(lambda x: "'" + x + "'", products)))
             cur.execute(f"""
                 UPDATE products 
                 SET supplier_id = {supplier_id}
-                WHERE product_name = '{product}';
+                WHERE product_name IN ({insert});
             """)
 
 
